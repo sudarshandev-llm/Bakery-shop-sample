@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sugar Rush Bakery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0f;
+      color: #fff;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+
+    /* ─── 3D Scene Canvas ─── */
+    #bg3d {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ─── Navigation ─── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+      padding: 1.2rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(2px);
+      transition: 0.4s ease;
+    }
+
+    nav.scrolled {
+      background: rgba(10, 10, 15, 0.6);
+      backdrop-filter: blur(20px);
+    }
+
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f6d365, #fda085);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.2rem;
+      list-style: none;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* ─── Liquid Glass Glassmorphism Button ─── */
+    .glass-btn {
+      position: relative;
+      padding: 0.7rem 1.6rem;
+      border: none;
+      border-radius: 50px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #fff;
+      cursor: pointer;
+      outline: none;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      transition: 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      overflow: hidden;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      z-index: 1;
+    }
+
+    .glass-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50px;
+      background: linear-gradient(
+        120deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.06) 30%,
+        rgba(255, 255, 255, 0.12) 50%,
+        rgba(255, 255, 255, 0.06) 70%,
+        transparent 100%
+      );
+      background-size: 200% 200%;
+      animation: liquidShimmer 4s ease-in-out infinite;
+      z-index: -1;
+    }
+
+    .glass-btn::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 52px;
+      background: linear-gradient(120deg,
+        rgba(246, 211, 101, 0.3),
+        rgba(253, 160, 133, 0.3),
+        rgba(246, 211, 101, 0.3)
+      );
+      background-size: 300% 300%;
+      animation: liquidBorder 6s ease-in-out infinite;
+      z-index: -2;
+      filter: blur(2px);
+      opacity: 0.6;
+    }
+
+    @keyframes liquidShimmer {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    @keyframes liquidBorder {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .glass-btn:hover {
+      transform: translateY(-3px) scale(1.04);
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(246, 211, 101, 0.4);
+      box-shadow: 0 12px 40px rgba(246, 211, 101, 0.15),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                  0 0 30px rgba(246, 211, 101, 0.05);
+    }
+
+    .glass-btn:active {
+      transform: translateY(0px) scale(0.97);
+    }
+
+    .glass-btn .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%);
+      transform: scale(0);
+      animation: rippleAnim 0.6s ease-out forwards;
+      pointer-events: none;
+    }
+
+    @keyframes rippleAnim {
+      to { transform: scale(4); opacity: 0; }
+    }
+
+    .glass-btn .magnetic-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: transform 0.15s ease-out;
+      z-index: 2;
+    }
+
+    /* ─── CTA special ─── */
+    .glass-btn.cta {
+      background: linear-gradient(135deg, rgba(246, 211, 101, 0.2), rgba(253, 160, 133, 0.2));
+      border-color: rgba(246, 211, 101, 0.35);
+      font-weight: 600;
+    }
+
+    .glass-btn.cta:hover {
+      background: linear-gradient(135deg, rgba(246, 211, 101, 0.3), rgba(253, 160, 133, 0.3));
+      box-shadow: 0 12px 40px rgba(246, 211, 101, 0.25);
+    }
+
+    /* ─── Hamburger ─── */
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .hamburger span {
+      width: 28px;
+      height: 2px;
+      background: #fff;
+      border-radius: 4px;
+      transition: 0.3s ease;
+    }
+
+    /* ─── Sections ─── */
+    section {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 6rem 2rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ─── Hero ─── */
+    #hero {
+      min-height: 100vh;
+      text-align: center;
+      justify-content: center;
+    }
+
+    #hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(3rem, 10vw, 7rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #f6d365, #fda085, #f6d365);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: liquidGrad 6s ease-in-out infinite;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+
+    @keyframes liquidGrad {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .hero-sub {
+      font-size: 1.15rem;
+      color: rgba(255,255,255,0.65);
+      max-width: 560px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.8;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* Floating 3D badge */
+    .badge-3d {
+      display: inline-block;
+      font-size: 0.75rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      margin-bottom: 1.5rem;
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 0.4rem 1.2rem;
+      border-radius: 50px;
+      backdrop-filter: blur(4px);
+    }
+
+    /* ─── Section Headers ─── */
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .section-title span {
+      background: linear-gradient(135deg, #f6d365, #fda085);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .section-sub {
+      text-align: center;
+      color: rgba(255,255,255,0.5);
+      max-width: 600px;
+      margin: 0 auto 3.5rem;
+    }
+
+    /* ─── Menu Grid ─── */
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 2rem;
+    }
+
+    .menu-card {
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      padding: 2rem;
+      text-align: center;
+      transition: 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      cursor: default;
+      transform-style: preserve-3d;
+      perspective: 800px;
+    }
+
+    .menu-card:hover {
+      transform: translateY(-8px) rotateX(2deg);
+      border-color: rgba(246, 211, 101, 0.2);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 40px rgba(246, 211, 101, 0.03);
+    }
+
+    .menu-card .icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .menu-card h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .menu-card p {
+      color: rgba(255,255,255,0.55);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin-bottom: 1.2rem;
+    }
+
+    .menu-card .price {
+      font-weight: 600;
+      color: #f6d365;
+      font-size: 1.1rem;
+    }
+
+    /* ─── About ─── */
+    .about-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    .about-text p {
+      color: rgba(255,255,255,0.6);
+      line-height: 1.9;
+      margin-bottom: 1.5rem;
+    }
+
+    .about-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    .stat-item {
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 1.8rem 1rem;
+      text-align: center;
+      transition: 0.3s ease;
+    }
+
+    .stat-item:hover {
+      border-color: rgba(246, 211, 101, 0.2);
+      transform: translateY(-4px);
+    }
+
+    .stat-item .num {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f6d365, #fda085);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .stat-item .label {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.45);
+      margin-top: 0.3rem;
+    }
+
+    /* ─── Gallery ─── */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .gallery-item {
+      aspect-ratio: 1;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      transition: 0.4s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .gallery-item::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(246, 211, 101, 0.08), transparent);
+      opacity: 0;
+      transition: 0.3s;
+    }
+
+    .gallery-item:hover {
+      transform: scale(1.03);
+      border-color: rgba(246, 211, 101, 0.2);
+    }
+
+    .gallery-item:hover::before { opacity: 1; }
+
+    .gallery-item .label {
+      position: absolute;
+      bottom: 1rem;
+      left: 1rem;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.5);
+      font-weight: 500;
+    }
+
+    /* ─── Testimonials ─── */
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+    }
+
+    .test-card {
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 24px;
+      padding: 2rem;
+      transition: 0.3s ease;
+    }
+
+    .test-card:hover {
+      border-color: rgba(246, 211, 101, 0.15);
+      transform: translateY(-4px);
+    }
+
+    .test-card .stars {
+      color: #f6d365;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+    }
+
+    .test-card blockquote {
+      color: rgba(255,255,255,0.6);
+      line-height: 1.7;
+      font-style: italic;
+      margin-bottom: 1.2rem;
+    }
+
+    .test-card .author {
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.8);
+    }
+
+    /* ─── Contact ─── */
+    .contact-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: start;
+    }
+
+    .contact-info p {
+      color: rgba(255,255,255,0.55);
+      line-height: 1.8;
+      margin-bottom: 1.5rem;
+    }
+
+    .contact-info .detail {
+      display: flex;
+      gap: 0.8rem;
+      align-items: center;
+      margin-bottom: 1rem;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .contact-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .contact-form input,
+    .contact-form textarea {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 1rem 1.2rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      color: #fff;
+      outline: none;
+      transition: 0.3s ease;
+    }
+
+    .contact-form input:focus,
+    .contact-form textarea:focus {
+      border-color: rgba(246, 211, 101, 0.3);
+      background: rgba(255,255,255,0.07);
+    }
+
+    .contact-form textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .contact-form input::placeholder,
+    .contact-form textarea::placeholder {
+      color: rgba(255,255,255,0.3);
+    }
+
+    /* ─── Footer ─── */
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 3rem 2rem;
+      border-top: 1px solid rgba(255,255,255,0.04);
+      color: rgba(255,255,255,0.3);
+      font-size: 0.85rem;
+    }
+
+    footer .socials {
+      display: flex;
+      justify-content: center;
+      gap: 1.2rem;
+      margin-bottom: 1.2rem;
+    }
+
+    footer .socials .glass-btn {
+      font-size: 1.2rem;
+      padding: 0.5rem 0.8rem;
+      min-width: 42px;
+    }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 900px) {
+      .about-wrap,
+      .contact-wrap {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+      .about-stats { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+        flex-direction: column;
+        position: absolute;
+        top: 100%;
+        right: 2rem;
+        background: rgba(10,10,15,0.85);
+        backdrop-filter: blur(24px);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 20px;
+        padding: 1.2rem;
+        gap: 0.8rem;
+        min-width: 200px;
+      }
+      .nav-links.open { display: flex; }
+      .hamburger { display: flex; }
+      .about-stats { grid-template-columns: repeat(2, 1fr); }
+      .menu-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 500px) {
+      .menu-grid,
+      .gallery-grid { grid-template-columns: 1fr; }
+      .about-stats { grid-template-columns: 1fr; }
+      nav { padding: 1rem; }
+      .hero-buttons { flex-direction: column; align-items: center; }
+    }
+
+    /* ─── Scrollbar ─── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0f; }
+    ::-webkit-scrollbar-thumb { background: rgba(246,211,101,0.2); border-radius: 10px; }
+  </style>
+</head>
+<body>
+
+  <!-- 3D Background -->
+  <canvas id="bg3d"></canvas>
+
+  <!-- Navigation -->
+  <nav id="navbar">
+    <span class="logo">Sugar Rush</span>
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#hero"      class="glass-btn"><span class="magnetic-wrap">Home</span></a></li>
+      <li><a href="#about"     class="glass-btn"><span class="magnetic-wrap">About</span></a></li>
+      <li><a href="#menu"      class="glass-btn"><span class="magnetic-wrap">Menu</span></a></li>
+      <li><a href="#gallery"   class="glass-btn"><span class="magnetic-wrap">Gallery</span></a></li>
+      <li><a href="#testimonials" class="glass-btn"><span class="magnetic-wrap">Reviews</span></a></li>
+      <li><a href="#contact"   class="glass-btn cta"><span class="magnetic-wrap">Contact</span></a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero -->
+  <section id="hero">
+    <div class="container" style="text-align:center;">
+      <span class="badge-3d">✦ Est. 2026 ✦</span>
+      <h1>Artisan<br>Bakery</h1>
+      <p class="hero-sub">Handcrafted with love &mdash; every bite tells a story of tradition, quality, and a pinch of magic.</p>
+      <div class="hero-buttons">
+        <a href="#menu" class="glass-btn cta" style="padding:0.9rem 2.4rem;font-size:1rem;">
+          <span class="magnetic-wrap">Explore Menu ↓</span>
+        </a>
+        <a href="#contact" class="glass-btn" style="padding:0.9rem 2.4rem;font-size:1rem;">
+          <span class="magnetic-wrap">Get in Touch</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section id="about">
+    <div class="container">
+      <h2 class="section-title">Our <span>Story</span></h2>
+      <p class="section-sub">From a tiny home kitchen to your neighborhood favourite.</p>
+      <div class="about-wrap">
+        <div class="about-text">
+          <p>Sugar Rush began with a simple dream &mdash; to share the warmth of freshly baked goods made from time-honoured recipes. Every loaf, pastry, and cake is crafted by hand using the finest natural ingredients.</p>
+          <p>We believe baking is an act of love. That's why we wake before sunrise, source locally, and never compromise on quality. Whether it's a flaky croissant or a celebration cake, we pour our hearts into every creation.</p>
+        </div>
+        <div class="about-stats">
+          <div class="stat-item"><div class="num">50+</div><div class="label">Artisan Recipes</div></div>
+          <div class="stat-item"><div class="num">12k</div><div class="label">Happy Customers</div></div>
+          <div class="stat-item"><div class="num">8</div><div class="label">Award Wins</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Menu -->
+  <section id="menu">
+    <div class="container">
+      <h2 class="section-title">Our <span>Menu</span></h2>
+      <p class="section-sub">Freshly baked daily &mdash; take your pick.</p>
+      <div class="menu-grid">
+        <div class="menu-card" style="--i:0">
+          <span class="icon">🥐</span>
+          <h3>Butter Croissant</h3>
+          <p>Golden, flaky layers of French butter pastry.</p>
+          <span class="price">$4.50</span>
+        </div>
+        <div class="menu-card" style="--i:1">
+          <span class="icon">🍞</span>
+          <h3>Sourdough Loaf</h3>
+          <p>72-hour fermented, crusty &amp; tangy perfection.</p>
+          <span class="price">$7.00</span>
+        </div>
+        <div class="menu-card" style="--i:2">
+          <span class="icon">🧁</span>
+          <h3>Velvet Cupcake</h3>
+          <p>Red velvet with cream cheese frosting.</p>
+          <span class="price">$3.75</span>
+        </div>
+        <div class="menu-card" style="--i:3">
+          <span class="icon">🍪</span>
+          <h3>Chunk Cookie</h3>
+          <p>Double chocolate chip, gooey centre.</p>
+          <span class="price">$2.50</span>
+        </div>
+        <div class="menu-card" style="--i:4">
+          <span class="icon">🥧</span>
+          <h3>Berry Tart</h3>
+          <p>Seasonal berries on silky vanilla custard.</p>
+          <span class="price">$6.00</span>
+        </div>
+        <div class="menu-card" style="--i:5">
+          <span class="icon">🍰</span>
+          <h3>Honey Cake</h3>
+          <p>Layered sponge with wildflower honey cream.</p>
+          <span class="price">$6.50</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gallery -->
+  <section id="gallery">
+    <div class="container">
+      <h2 class="section-title">Our <span>Gallery</span></h2>
+      <p class="section-sub">A peek inside our bakery.</p>
+      <div class="gallery-grid">
+        <div class="gallery-item">🥖<span class="label">Breads</span></div>
+        <div class="gallery-item">🥐<span class="label">Pastries</span></div>
+        <div class="gallery-item">🎂<span class="label">Cakes</span></div>
+        <div class="gallery-item">🍩<span class="label">Donuts</span></div>
+        <div class="gallery-item">🥯<span class="label">Bagels</span></div>
+        <div class="gallery-item">🧁<span class="label">Cupcakes</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section id="testimonials">
+    <div class="container">
+      <h2 class="section-title">What <span>They Say</span></h2>
+      <p class="section-sub">Straight from the hearts of our customers.</p>
+      <div class="test-grid">
+        <div class="test-card">
+          <div class="stars">★★★★★</div>
+          <blockquote>"The sourdough is next-level. You can taste the care in every slice. My family fights over the last piece!"</blockquote>
+          <div class="author">— Priya M.</div>
+        </div>
+        <div class="test-card">
+          <div class="stars">★★★★★</div>
+          <blockquote>"Ordered a birthday cake and it was stunning — almost too pretty to eat. Almost. Absolutely delicious."</blockquote>
+          <div class="author">— James K.</div>
+        </div>
+        <div class="test-card">
+          <div class="stars">★★★★★</div>
+          <blockquote>"Their croissants transport me straight to Paris. Flaky, buttery, perfect. A hidden gem!"</blockquote>
+          <div class="author">— Elena R.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section id="contact">
+    <div class="container">
+      <h2 class="section-title">Get in <span>Touch</span></h2>
+      <p class="section-sub">We'd love to hear from you.</p>
+      <div class="contact-wrap">
+        <div class="contact-info">
+          <p>Have a question, a custom order, or just want to say hello? Reach out — we reply within 24 hours.</p>
+          <div class="detail">📍 123 Baker's Lane, Sweetville</div>
+          <div class="detail">📞 (555) 123-BAKE</div>
+          <div class="detail">✉️ hello@sugarrushbakery.com</div>
+          <div style="margin-top:1.5rem;">
+            <a href="#" class="glass-btn" style="padding:0.6rem 1.4rem;"><span class="magnetic-wrap">📅 Book a Tasting</span></a>
+          </div>
+        </div>
+        <form class="contact-form" onsubmit="event.preventDefault(); this.reset();">
+          <input type="text" placeholder="Your Name" required>
+          <input type="email" placeholder="Email Address" required>
+          <textarea placeholder="Your Message…" required></textarea>
+          <button type="submit" class="glass-btn cta" style="align-self:flex-start;padding:0.9rem 2.4rem;">
+            <span class="magnetic-wrap">Send Message ✦</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="socials">
+      <a href="#" class="glass-btn" aria-label="Instagram"><span class="magnetic-wrap">📸</span></a>
+      <a href="#" class="glass-btn" aria-label="Facebook"><span class="magnetic-wrap">👍</span></a>
+      <a href="#" class="glass-btn" aria-label="Twitter"><span class="magnetic-wrap">🐦</span></a>
+    </div>
+    <p>&copy; 2026 Sugar Rush Bakery. Made with love &amp; butter.</p>
+  </footer>
+
+  <!-- ─── Scripts ─── -->
+  <script>
+    (function(){
+
+      // ─── 1. Three.js – 3D Background ───
+      const canvas = document.getElementById('bg3d');
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      // Group of floating orbs
+      const orbGroup = new THREE.Group();
+      const orbMat = new THREE.MeshPhysicalMaterial({
+        color: 0xf6d365,
+        metalness: 0.1,
+        roughness: 0.2,
+        transparent: true,
+        opacity: 0.08,
+        emissive: 0xf6d365,
+        emissiveIntensity: 0.02,
+        clearcoat: 0.3,
+      });
+
+      const orbMat2 = new THREE.MeshPhysicalMaterial({
+        color: 0xfda085,
+        metalness: 0.05,
+        roughness: 0.15,
+        transparent: true,
+        opacity: 0.06,
+        emissive: 0xfda085,
+        emissiveIntensity: 0.02,
+        clearcoat: 0.3,
+      });
+
+      const orbs = [];
+      const count = 18;
+
+      for (let i = 0; i < count; i++) {
+        const size = 0.3 + Math.random() * 1.2;
+        const geo = new THREE.SphereGeometry(size, 32, 32);
+        const mat = i % 2 === 0 ? orbMat : orbMat2;
+        const mesh = new THREE.Mesh(geo, mat);
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.random() * Math.PI * 2;
+        const radius = 3 + Math.random() * 6;
+        mesh.position.set(
+          Math.sin(theta) * Math.cos(phi) * radius,
+          Math.sin(theta) * Math.sin(phi) * radius * 0.6,
+          Math.cos(theta) * radius * 0.5
+        );
+        mesh.userData = {
+          speed: 0.05 + Math.random() * 0.15,
+          offset: Math.random() * Math.PI * 2,
+          axis: new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize(),
+          origPos: mesh.position.clone(),
+        };
+        orbGroup.add(mesh);
+        orbs.push(mesh);
+      }
+
+      scene.add(orbGroup);
+      camera.position.z = 8;
+      camera.position.y = 1;
+
+      // Mouse tracking for parallax
+      let mx = 0, my = 0;
+      document.addEventListener('mousemove', e => {
+        mx = (e.clientX / window.innerWidth - 0.5) * 2;
+        my = (e.clientY / window.innerHeight - 0.5) * 2;
+      });
+
+      function anim3d() {
+        requestAnimationFrame(anim3d);
+        const t = performance.now() * 0.0003;
+
+        orbs.forEach((orb, i) => {
+          const d = orb.userData;
+          orb.position.x = d.origPos.x + Math.sin(t * d.speed + d.offset) * 0.6;
+          orb.position.y = d.origPos.y + Math.cos(t * d.speed * 0.7 + d.offset) * 0.6;
+          orb.position.z = d.origPos.z + Math.sin(t * d.speed * 0.5 + d.offset * 2) * 0.6;
+          orb.rotation.x += 0.003;
+          orb.rotation.y += 0.005;
+        });
+
+        orbGroup.rotation.x += (my * 0.02 - orbGroup.rotation.x) * 0.02;
+        orbGroup.rotation.y += (mx * 0.03 - orbGroup.rotation.y) * 0.02;
+
+        renderer.render(scene, camera);
+      }
+      anim3d();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // ─── 2. Nav scroll effect ───
+      const nav = document.getElementById('navbar');
+      window.addEventListener('scroll', () => {
+        nav.classList.toggle('scrolled', window.scrollY > 60);
+      });
+
+      // ─── 3. Hamburger ───
+      const hamburger = document.getElementById('hamburger');
+      const navLinks = document.getElementById('navLinks');
+      hamburger.addEventListener('click', () => navLinks.classList.toggle('open'));
+      document.querySelectorAll('.nav-links a').forEach(a => {
+        a.addEventListener('click', () => navLinks.classList.remove('open'));
+      });
+
+      // ─── 4. Ripple + Magnetic Effect on all .glass-btn ───
+      document.querySelectorAll('.glass-btn').forEach(btn => {
+        // Ripple on click
+        btn.addEventListener('click', function(e) {
+          const rect = this.getBoundingClientRect();
+          const ripple = document.createElement('span');
+          ripple.className = 'ripple';
+          const size = Math.max(rect.width, rect.height);
+          ripple.style.width = ripple.style.height = size + 'px';
+          ripple.style.left = (e.clientX - rect.left - size/2) + 'px';
+          ripple.style.top = (e.clientY - rect.top - size/2) + 'px';
+          this.appendChild(ripple);
+          setTimeout(() => ripple.remove(), 600);
+        });
+
+        // Magnetic effect
+        const wrap = btn.querySelector('.magnetic-wrap');
+        if (!wrap) return;
+
+        btn.addEventListener('mousemove', function(e) {
+          const rect = this.getBoundingClientRect();
+          const x = e.clientX - rect.left - rect.width/2;
+          const y = e.clientY - rect.top - rect.height/2;
+          const dist = Math.sqrt(x*x + y*y);
+          const maxDist = Math.max(rect.width, rect.height) * 0.8;
+          const strength = Math.min(dist / maxDist, 1) * 6;
+          wrap.style.transform = `translate(${x * 0.15}px, ${y * 0.15}px)`;
+        });
+
+        btn.addEventListener('mouseleave', function() {
+          wrap.style.transform = 'translate(0, 0)';
+        });
+      });
+
+      // ─── 5. Smooth scroll for anchor links (no-jump) ───
+      document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', function(e) {
+          const target = document.querySelector(this.getAttribute('href'));
+          if (!target) return;
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+
+      // ─── 6. Intersection Observer for fade-up ───
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+          }
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('section .container > *').forEach(el => {
+        if (el.classList.contains('badge-3d')) return;
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = 'opacity 0.7s ease, transform 0.7s ease';
+        observer.observe(el);
+      });
+
+    })();
+  </script>
+
+  <!-- Three.js from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</body>
+</html>
